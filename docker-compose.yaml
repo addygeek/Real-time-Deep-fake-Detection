@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DB_URI=mongodb://mongo:27017/spectrashield
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ML_ENGINE_URL=http://ml-engine:5000
+    volumes:
+      - shared_uploads:/app/uploads
+    depends_on:
+      - ml-engine
+      - redis
+      - mongo
+
+  ml-engine:
+    build: ./ml-engine
+    ports:
+      - "5000:5000"
+    volumes:
+      - shared_uploads:/app/uploads
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:
+  shared_uploads:

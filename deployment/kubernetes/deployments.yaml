@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spectrashield-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: spectrashield-backend:latest
+        ports:
+        - containerPort: 4000
+        env:
+        - name: DB_URI
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: db-uri
+        - name: REDIS_HOST
+          value: "redis-service"
+        - name: ML_ENGINE_URL
+          value: "http://ml-engine-service:5000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spectrashield-ml-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-engine
+  template:
+    metadata:
+      labels:
+        app: ml-engine
+    spec:
+      containers:
+      - name: ml-engine
+        image: spectrashield-ml-engine:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spectrashield-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: spectrashield-frontend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://backend-service:4000"
